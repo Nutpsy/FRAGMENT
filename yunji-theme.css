@@ -165,7 +165,7 @@ body {
   top: 50%;
   left: 50%;
   display: block;
-  width: max(100vw, 160vh);
+  width: min(72vw, 160vh);
   height: auto;
   transform: translate(-50%, -50%);
 }
@@ -683,7 +683,7 @@ body {
   }
 
   .hero-scene canvas {
-    width: max(100vw, 160vh);
+    width: min(72vw, 160vh);
   }
 
   .hero-enter {
