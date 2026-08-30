@@ -2,9 +2,17 @@
   "use strict";
 
   const canvas = document.querySelector("#art");
+  const LOGICAL_WIDTH = 1440;
+  const LOGICAL_HEIGHT = 900;
+  const displayWidth = canvas.getBoundingClientRect().width || LOGICAL_WIDTH;
+  const deviceScale = window.devicePixelRatio || 1;
+  const renderScale = Math.min(2.5, Math.max(1, displayWidth / LOGICAL_WIDTH * deviceScale));
+  canvas.width = Math.round(LOGICAL_WIDTH * renderScale);
+  canvas.height = Math.round(LOGICAL_HEIGHT * renderScale);
   const ctx = canvas.getContext("2d", { alpha: false });
-  const W = canvas.width;
-  const H = canvas.height;
+  ctx.scale(renderScale, renderScale);
+  const W = LOGICAL_WIDTH;
+  const H = LOGICAL_HEIGHT;
 
   const FIELD_START = 680;
   const CAPTURE_END = 1250;
