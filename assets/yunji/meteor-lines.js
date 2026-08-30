@@ -17,14 +17,16 @@
   const FIELD_START = 680;
   const CAPTURE_END = 1250;
   const FIELD_END = 1600;
+  const COMPOSITION_SCALE = .72;
   const METEOR_CENTER_X = W * .5;
   const METEOR_CENTER_Y = H * .5;
-  const METEOR_RADIUS_X = W * .35;
-  const METEOR_RADIUS_Y = 348;
+  const METEOR_RADIUS_X = W * .35 * COMPOSITION_SCALE;
+  const METEOR_RADIUS_Y = 348 * COMPOSITION_SCALE;
   const AI_SOURCE_CENTER_X = 686.83;
   const AI_SOURCE_CENTER_Y = 447.99;
-  const AI_SCALE = .46;
-  const LANE_Y = [292, 360, 428, 496, 564];
+  const AI_SCALE = .46 * COMPOSITION_SCALE;
+  const LANE_Y = [292, 360, 428, 496, 564]
+    .map(y => METEOR_CENTER_Y + (y - METEOR_CENTER_Y) * COMPOSITION_SCALE);
   const DENSE_COUNT = 520;
   const LOOSE_COUNT = 150;
   const EROSION_DURATION = 5;
@@ -43,7 +45,7 @@
   const ANIMATION_SPEED = 2.70;
   const SPARKLE_RADIUS_SCALE = 3.2;
   const SPARKLE_SPEED_SCALE = 1.1;
-  const TITLE_STYLE = { font: `200 238px "Serif Title", serif`, offset: 110 };
+  const TITLE_STYLE = { font: `200 171px "Serif Title", serif`, offset: 79 };
 
   const particles = [];
   const meteorDots = [];
@@ -852,6 +854,12 @@
   }
 
   function addGeneratedLayer(config) {
+    config = {
+      ...config,
+      radius: config.radius.map(value => value * COMPOSITION_SCALE),
+      curve: config.curve * COMPOSITION_SCALE,
+      verticalJitter: config.verticalJitter * COMPOSITION_SCALE
+    };
     const bands = Array.from({ length: config.bands }, (_, bandIndex) => {
       const normalizedY = mix(-.88, .88, (bandIndex + .5) / config.bands);
       const y = METEOR_CENTER_Y + normalizedY * METEOR_RADIUS_Y;

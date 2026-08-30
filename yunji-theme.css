@@ -144,8 +144,8 @@ body {
 .hero {
   position: relative;
   isolation: isolate;
-  min-height: 100svh;
-  height: 100svh;
+  min-height: 82svh;
+  height: 82svh;
   padding: 0;
   overflow: hidden;
   background: var(--yunji-paper);
@@ -165,7 +165,7 @@ body {
   top: 50%;
   left: 50%;
   display: block;
-  width: min(72vw, 160vh);
+  width: max(100vw, 160vh);
   height: auto;
   transform: translate(-50%, -50%);
 }
@@ -683,7 +683,12 @@ body {
   }
 
   .hero-scene canvas {
-    width: min(72vw, 160vh);
+    width: 100vw;
+  }
+
+  .hero {
+    min-height: 64svh;
+    height: 64svh;
   }
 
   .hero-enter {

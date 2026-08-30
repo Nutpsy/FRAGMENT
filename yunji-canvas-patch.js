@@ -69,13 +69,13 @@
 
     this.save();
     this.globalAlpha = 1;
-    this.font = '100 238px "Serif Title", serif';
+    this.font = '100 171px "Serif Title", serif';
     this.textAlign = "center";
     this.textBaseline = "middle";
     this.fillStyle = "rgb(0,0,0)";
-    nativeFillText.call(this, "碎", 610, 458);
+    nativeFillText.call(this, "碎", 641, 458);
     this.fillStyle = "rgb(255,255,255)";
-    nativeFillText.call(this, "屑", 830, 458);
+    nativeFillText.call(this, "屑", 799, 458);
     this.restore();
 
     this.fillStyle = previousFill;
