@@ -50,25 +50,15 @@ const INITIAL_DATA = {
       content: "羞于启齿"
     },
     {
-      id: "bs_1749561600000",
-      date: "2026.05.10",
-      content: "好恶心"
-    },
-    {
       id: "bs_1749648000000",
       date: "2026.05.11",
-      content: "我害怕在梦寐以求的时刻，盛大的期待最终只析出了一滩空虚。"
+      content: "在梦寐以求的时刻，盛大的期待最终只析出了一滩空虚。"
     },
     {
       id: "bs_1749665024000",
       date: "2026.05.11",
       content: "向朋友诉说我无聊可笑的忧虑，风从一块石头吹进另一块石头"
     },
-    {
-      id: "bs_1747219200000",
-      date: "2026.05.15",
-      content: "哪怕是被骗，我也想相信我的付出是有意义的。"
-    }
   ],
 
   manifesto: {
@@ -80,6 +70,9 @@ const INITIAL_DATA = {
 const STORAGE_KEY = 'skadrate_blog_v1';
 const BSIDE_UNLOCK_KEY = 'skadrate_bside_unlocked';
 const DELETED_KEY = 'skadrate_deleted_ids';
+const RETIRED_IDS = {
+  bSide: ['bs_1749561600000', 'bs_1747219200000']
+};
 
 const SkadrateData = {
   load() {
@@ -142,6 +135,12 @@ const SkadrateData = {
         }
       });
     }
+
+    Object.entries(RETIRED_IDS).forEach(([category, ids]) => {
+      if (!Array.isArray(merged[category])) return;
+      merged[category] = merged[category].filter(item => !ids.includes(item.id));
+    });
+
     return merged;
   },
 
@@ -203,11 +202,6 @@ const SkadrateData = {
     const arr = data[category];
     if (!Array.isArray(arr)) return [];
     return arr;
-  },
-
-  isAdmin() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('id') === 'Skadrate';
   },
 
   bSide: {

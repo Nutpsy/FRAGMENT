@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https: http://127.0.0.1:*; img-src 'self' data: blob: https:; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>碎屑 // 管理</title>
+  <link rel="stylesheet" href="admin.css">
+  <script src="config.js" defer></script>
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a href="../" aria-label="返回碎屑首页">碎屑</a>
+    <p>AUTHORIZED CONTENT TERMINAL</p>
+    <button id="logout-button" class="text-button" type="button" hidden>退出</button>
+  </header>
+
+  <main>
+    <section id="setup-view" class="gate" hidden>
+      <p class="eyebrow">01 / CONNECTION</p>
+      <h1>连接发布服务</h1>
+      <p>首次使用时粘贴 Cloudflare Worker 地址。地址只保存在这台设备上。</p>
+      <form id="setup-form" class="stack">
+        <label>Worker 地址
+          <input id="api-base-input" type="url" placeholder="https://fragment-admin.example.workers.dev" required>
+        </label>
+        <button class="primary" type="submit">保存并继续</button>
+      </form>
+    </section>
+
+    <section id="login-view" class="gate" hidden>
+      <p class="eyebrow">02 / IDENTITY</p>
+      <h1>管理员身份验证</h1>
+      <p>使用 GitHub 登录。只有站点所有者的固定用户 ID 能进入发布界面。</p>
+      <button id="login-button" class="primary" type="button">使用 GitHub 登录</button>
+      <button id="change-api-button" class="text-button" type="button">更改服务地址</button>
+    </section>
+
+    <section id="admin-view" class="workspace" hidden>
+      <aside class="composer">
+        <div class="identity-row">
+          <div>
+            <p class="eyebrow">SIGNED IN</p>
+            <strong id="identity-name">—</strong>
+          </div>
+          <span id="publish-state">已同步</span>
+        </div>
+
+        <form id="content-form" class="stack">
+          <label>栏目
+            <select id="category-input">
+              <option value="scintilla">SCINTILLA</option>
+              <option value="inlandEmpire">内陆帝国</option>
+              <option value="gravityRainbow">万有引力之虹</option>
+              <option value="bSide">B-side</option>
+            </select>
+          </label>
+
+          <label>日期
+            <input id="date-input" type="date" required>
+          </label>
+
+          <div data-fields="scintilla bSide">
+            <label>正文
+              <textarea id="content-input" rows="8" maxlength="100000" placeholder="写下新的碎屑……"></textarea>
+            </label>
+          </div>
+
+          <div data-fields="inlandEmpire" hidden>
+            <label>上传图片
+              <input id="image-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+            </label>
+            <label>或填写现有图片路径
+              <input id="image-src-input" type="text" placeholder="images/example.jpg">
+            </label>
+            <label>图片说明（alt）
+              <input id="image-alt-input" type="text" maxlength="500">
+            </label>
+            <label>类型
+              <select id="image-category-input">
+                <option value="photo">photo</option>
+                <option value="screenshot">screenshot</option>
+                <option value="meme">meme</option>
+              </select>
+            </label>
+            <label>Caption
+              <input id="image-caption-input" type="text" maxlength="1000">
+            </label>
+          </div>
+
+          <div data-fields="gravityRainbow" hidden>
+            <label>标题
+              <input id="note-title-input" type="text" maxlength="500">
+            </label>
+            <label>标签（逗号分隔）
+              <input id="note-tags-input" type="text" maxlength="1000" placeholder="物理, 量子, 随笔">
+            </label>
+            <label>Markdown 正文
+              <textarea id="note-markdown-input" rows="16" maxlength="200000" placeholder="# 标题&#10;&#10;正文……"></textarea>
+            </label>
+          </div>
+
+          <button id="publish-button" class="primary" type="submit">添加并发布</button>
+        </form>
+      </aside>
+
+      <section class="records" aria-labelledby="records-title">
+        <div class="records-head">
+          <div>
+            <p class="eyebrow">LIVE CONTENT</p>
+            <h2 id="records-title">当前记录</h2>
+          </div>
+          <button id="refresh-button" class="text-button" type="button">刷新</button>
+        </div>
+        <div id="record-list" class="record-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="notice" class="notice" role="status" aria-live="polite"></div>
+</body>
+</html>

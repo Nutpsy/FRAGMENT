@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fragment-admin",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-19",
+  "vars": {
+    "ADMIN_ORIGIN": "https://nutpsy.github.io",
+    "ADMIN_URL": "https://nutpsy.github.io/FRAGMENT/admin/",
+    "GITHUB_CLIENT_ID": "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID",
+    "GITHUB_ALLOWED_USER_ID": "52111111",
+    "GITHUB_OWNER": "Nutpsy",
+    "GITHUB_REPO": "FRAGMENT",
+    "GITHUB_BRANCH": "main",
+    "CONTENT_PATH": "data.js"
+  }
+}

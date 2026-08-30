@@ -437,7 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initHomeRendering();
   initBSide();
   initBGM();
-  initAdmin();
   initSPALinks();
   Router.init();
 });
@@ -446,32 +445,26 @@ document.addEventListener('DOMContentLoaded', () => {
    Hero 区域动画初始化
    ======================================== */
 function initHeroAnimations() {
+  const hero = document.querySelector('.hero');
   const heroTitle = document.querySelector('.hero-title');
   const heroSubtitle = document.querySelector('.hero-subtitle');
+  if (!hero) return;
 
-  if (heroTitle) {
-    setTimeout(() => { heroTitle.classList.add('visible'); }, 200);
-  }
-  if (heroSubtitle) {
-    setTimeout(() => { heroSubtitle.classList.add('visible'); }, 1000);
-  }
+  const finishIntro = () => {
+    if (hero.classList.contains('intro-complete')) return;
+    hero.classList.add('intro-complete');
+    // 保留动画声明的 forwards 终帧，避免移除类后回落到另一套静态样式而跳版。
+    // 动画本身只运行一次；保留 class 不会重播或继续消耗帧。
+  };
 
-  const geoElements = [
-    { selector: '.geo-rect-1', delay: 400 },
-    { selector: '.geo-circle-1', delay: 600 },
-    { selector: '.geo-rect-2', delay: 800 },
-    { selector: '.geo-circle-2', delay: 1000 },
-    { selector: '.geo-lines', delay: 1200 },
-    { selector: '.geo-cross', delay: 1400 },
-    { selector: '.geo-triangle', delay: 1600 },
-  ];
-
-  geoElements.forEach(({ selector, delay }) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      setTimeout(() => { element.classList.add('visible'); }, delay);
-    }
+  window.requestAnimationFrame(() => {
+    hero.classList.add('intro-running');
+    if (heroTitle) heroTitle.classList.add('visible');
+    if (heroSubtitle) heroSubtitle.classList.add('visible');
   });
+
+  // 动画声明保留终帧；延时只负责标记完成，不会引发二次落版。
+  window.setTimeout(finishIntro, 2550);
 }
 
 /* ========================================
@@ -479,9 +472,11 @@ function initHeroAnimations() {
    ======================================== */
 function initNavScroll() {
   const nav = document.querySelector('.nav');
+  if (!nav) return;
   let lastScroll = 0;
+  let ticking = false;
 
-  window.addEventListener('scroll', () => {
+  const updateNav = () => {
     const currentScroll = window.pageYOffset;
     if (currentScroll > 100) {
       nav.classList.add('nav-scrolled');
@@ -494,7 +489,15 @@ function initNavScroll() {
       nav.style.transform = 'translateY(0)';
     }
     lastScroll = currentScroll;
-  });
+    ticking = false;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(updateNav);
+      ticking = true;
+    }
+  }, { passive: true });
 }
 
 /* ========================================
@@ -555,19 +558,32 @@ function initScrollProgress() {
       left: 0;
       height: 3px;
       background: linear-gradient(90deg, #C62828, #FBC02D);
-      width: 0%;
+      width: 100%;
       z-index: 9999;
-      transition: width 0.1s ease-out;
+      transform: scaleX(0);
+      transform-origin: left center;
+      will-change: transform;
     }
   `;
   document.head.appendChild(style);
 
-  window.addEventListener('scroll', () => {
+  let ticking = false;
+  const updateProgress = () => {
     const scrollTop = window.pageYOffset;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = (scrollTop / docHeight) * 100;
-    progressBar.style.width = `${progress}%`;
-  });
+    const progress = docHeight > 0 ? Math.min(1, Math.max(0, scrollTop / docHeight)) : 0;
+    progressBar.style.transform = `scaleX(${progress})`;
+    ticking = false;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(updateProgress);
+      ticking = true;
+    }
+  }, { passive: true });
+
+  updateProgress();
 }
 
 /* ========================================
@@ -727,120 +743,6 @@ function initBGM() {
 }
 
 /* ========================================
-   管理员模式
-   ======================================== */
-function initAdmin() {
-  if (typeof SkadrateData === 'undefined') return;
-  if (!SkadrateData.isAdmin()) return;
-
-  const fab = document.getElementById('admin-fab');
-  const modal = document.getElementById('admin-modal');
-  const closeBtn = document.getElementById('admin-close');
-  if (!fab || !modal) return;
-
-  fab.style.display = 'flex';
-
-  fab.addEventListener('click', () => {
-    modal.classList.add('active');
-    refreshAdminList();
-  });
-
-  closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
-
-  // Tab 切换
-  modal.querySelectorAll('.admin-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      modal.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-      modal.querySelectorAll('.admin-form').forEach(f => f.classList.remove('active'));
-      tab.classList.add('active');
-      const form = modal.querySelector(`.admin-form[data-form="${tab.dataset.tab}"]`);
-      if (form) form.classList.add('active');
-      refreshAdminList(tab.dataset.tab);
-    });
-  });
-
-  // 发布按钮
-  modal.querySelectorAll('.admin-submit').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.dataset.cat;
-      let item = {};
-      if (cat === 'scintilla') {
-        item = {
-          date: document.getElementById('cms-sci-date').value.trim() || new Date().toISOString().slice(0,10).replace(/-/g,'.'),
-          content: document.getElementById('cms-sci-content').value.trim()
-        };
-      } else if (cat === 'inlandEmpire') {
-        item = {
-          date: document.getElementById('cms-ie-date').value.trim() || new Date().toISOString().slice(0,10).replace(/-/g,'.'),
-          src: document.getElementById('cms-ie-src').value.trim(),
-          alt: document.getElementById('cms-ie-alt').value.trim(),
-          category: document.getElementById('cms-ie-category').value,
-          caption: document.getElementById('cms-ie-caption').value.trim()
-        };
-      } else if (cat === 'gravityRainbow') {
-        const tagsRaw = document.getElementById('cms-gr-tags').value.trim();
-        const mdFile = document.getElementById('cms-gr-mdfile').value.trim();
-        item = {
-          date: document.getElementById('cms-gr-date').value.trim() || new Date().toISOString().slice(0,10).replace(/-/g,'.'),
-          title: document.getElementById('cms-gr-title').value.trim(),
-          mdFile: mdFile || undefined,
-          mdContent: '',
-          tags: tagsRaw ? tagsRaw.split(/[,，]/).map(t => t.trim()).filter(Boolean) : []
-        };
-      } else if (cat === 'bSide') {
-        item = {
-          date: document.getElementById('cms-bs-date').value.trim() || new Date().toISOString().slice(0,10).replace(/-/g,'.'),
-          content: document.getElementById('cms-bs-content').value.trim()
-        };
-      }
-
-      if ((item.content || item.src || item.mdContent || item.mdFile)) {
-        SkadrateData.addItem(cat, item);
-        // 清空对应表单
-        modal.querySelector(`.admin-form[data-form="${cat}"]`).querySelectorAll('input, textarea, select').forEach(el => {
-          if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
-        });
-        refreshAdminList(cat);
-        // 同步刷新首页
-        initHomeRendering();
-      }
-    });
-  });
-
-  // 初始列表
-  refreshAdminList('scintilla');
-}
-
-function refreshAdminList(category) {
-  const listEl = document.getElementById('admin-list');
-  if (!listEl) return;
-  const activeTab = document.querySelector('.admin-tab.active');
-  const cat = category || (activeTab && activeTab.dataset.tab) || 'scintilla';
-  const items = SkadrateData.getAll(cat);
-
-  listEl.innerHTML = `<div class="admin-list-title">当前 ${cat} 记录 (${items.length})</div>` +
-    items.slice(0, 30).map(it => {
-      const title = it.title || it.content || it.src || it.caption || '(无标题)';
-      const short = String(title).slice(0, 40) + (String(title).length > 40 ? '…' : '');
-      return `
-        <div class="admin-list-item">
-          <span>${escapeHtml(short)}</span>
-          <button data-cat="${cat}" data-id="${it.id}">DELETE</button>
-        </div>
-      `;
-    }).join('');
-
-  listEl.querySelectorAll('button[data-id]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      SkadrateData.deleteItem(btn.dataset.cat, btn.dataset.id);
-      refreshAdminList(btn.dataset.cat);
-      initHomeRendering();
-    });
-  });
-}
-
-/* ========================================
    SPA 链接劫持
    ======================================== */
 function initSPALinks() {
@@ -860,10 +762,10 @@ function initSPALinks() {
 function escapeHtml(str) {
   if (typeof str !== 'string') return '';
   return str
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
 
