@@ -3,7 +3,7 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v12';
+const DATA_VERSION = 'v13';
 
 const INITIAL_DATA = {
   scintilla: [
@@ -73,6 +73,11 @@ const INITIAL_DATA = {
       id: "bs_1788710400001",
       date: "2026.09.07",
       content: "请给我第二次的生命吧"
+    },
+    {
+      id: "bs_1788796800000",
+      date: "2026.09.08",
+      content: "向内收缩的欲望 在此刻达到了顶点。"
     },
   ],
 
