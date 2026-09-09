@@ -3,7 +3,7 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v13';
+const DATA_VERSION = 'v14';
 
 const INITIAL_DATA = {
   scintilla: [
@@ -64,21 +64,6 @@ const INITIAL_DATA = {
       date: "2026.09.04",
       content: "Broken Dreams"
     },
-    {
-      id: "bs_1788710400000",
-      date: "2026.09.07",
-      content: "如果记忆能被挖去"
-    },
-    {
-      id: "bs_1788710400001",
-      date: "2026.09.07",
-      content: "请给我第二次的生命吧"
-    },
-    {
-      id: "bs_1788796800000",
-      date: "2026.09.08",
-      content: "向内收缩的欲望 在此刻达到了顶点。"
-    },
   ],
 
   manifesto: {
@@ -91,7 +76,7 @@ const STORAGE_KEY = 'skadrate_blog_v1';
 const BSIDE_UNLOCK_KEY = 'skadrate_bside_unlocked';
 const DELETED_KEY = 'skadrate_deleted_ids';
 const RETIRED_IDS = {
-  bSide: ['bs_1749561600000', 'bs_1747219200000']
+  bSide: ['bs_1749561600000', 'bs_1747219200000', 'bs_1788710400000', 'bs_1788710400001', 'bs_1788796800000']
 };
 
 const SkadrateData = {
