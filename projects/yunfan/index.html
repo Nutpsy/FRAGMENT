@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>云帆 · 碎屑</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --paper: #f4f2e9;
+      --ink: #0d1d3d;
+      --blue: #1b5fd1;
+      --panel: rgba(8, 25, 58, 0.9);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56, 115, 219, 0.22), transparent 32%),
+        #07142f;
+      color: var(--paper);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(300px, 1800px);
+      gap: 0;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .stage {
+      position: relative;
+      width: min(96vw, calc(92vh * 56 / 27), 1800px);
+      aspect-ratio: 56 / 27;
+      overflow: hidden;
+      border-radius: 4px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+      background: var(--blue);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel {
+      display: none;
+      padding: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: rgba(244, 242, 233, 0.62);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    label {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin: 18px 0 8px;
+      color: rgba(244, 242, 233, 0.78);
+      font-size: 12px;
+    }
+
+    input[type="range"] { width: 100%; accent-color: #78a7ff; }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 9px;
+      padding: 11px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    button:hover { background: rgba(255, 255, 255, 0.14); }
+    button.primary { background: #f1f3ee; color: #0b2455; }
+
+    .legend {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(244, 242, 233, 0.58);
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: minmax(0, 1fr); }
+      .panel { width: 100%; }
+    }
+    .project-credit { position: fixed; z-index: 2; inset: auto 20px 12px; margin: 0; text-align: center; font-size: 12px; line-height: 1.8; color: #cbd5e7; }
+    .project-credit a { color: inherit; text-underline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="stage" aria-label="云帆粒子动画画布">
+      <canvas id="art" width="2240" height="1080"></canvas>
+    </section>
+
+    <aside class="panel">
+      <h1>云帆｜流线锚定原型 V4</h1>
+      <p class="subtitle">按一张连续帆面重建：所有流线贯穿统一轮廓并遵循同一套风场、速度和粒径规则；粒子持续离开与补生。</p>
+
+      <label for="density"><span>粒子数量</span><output id="densityValue">1000</output></label>
+      <input id="density" type="range" min="360" max="2600" step="20" value="1000" />
+
+      <label for="wind"><span>风的强度</span><output id="windValue">1.4</output></label>
+      <input id="wind" type="range" min="0" max="3" step="0.1" value="1.4" />
+
+      <label for="tempo"><span>动画速度</span><output id="tempoValue">3.2×</output></label>
+      <input id="tempo" type="range" min="0.45" max="5" step="0.05" value="3.2" />
+
+      <label for="sparkle"><span>闪光强度</span><output id="sparkleValue">4.0</output></label>
+      <input id="sparkle" type="range" min="0" max="4" step="0.1" value="4" />
+
+      <div class="buttons">
+        <button id="toggle" class="primary">暂停</button>
+        <button id="regenerate">重新生成</button>
+        <button id="restart">从头播放</button>
+        <button id="save">保存当前帧</button>
+      </div>
+
+      <div class="legend">
+        实时预览按 810×1080 计算，以保证动画流畅；可直接保存 PNG。<br />
+        不再切换“集中成帆／稳定循环”两套模式；从第一帧开始始终使用同一套持续流动规则。
+      </div>
+    </aside>
+  </main>
+  <p class="project-credit">练习作，参考作品原作者及原帖链接暂未查明。 · <a href="../../index.html#inland-empire">返回碎屑</a></p>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.querySelector("#art");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const VIEW_W = canvas.width;
+      // 场景仍按原始 810×1080 设计坐标绘制；加宽部分只作为左右留白。
+      const W = 810;
+      const H = canvas.height;
+      const SCENE_X = (VIEW_W - W) * 0.5;
+      const TAU = Math.PI * 2;
+      const MIN_PARTICLE_RADIUS = 5.0;
+      const LOOP_SECONDS = 14.557505;
+      const previewParams = new URLSearchParams(location.search);
+      const previewTime = Number(previewParams.get("time"));
+
+      const controls = {
+        density: document.querySelector("#density"),
+        wind: document.querySelector("#wind"),
+        tempo: document.querySelector("#tempo"),
+        sparkle: document.querySelector("#sparkle"),
+        densityValue: document.querySelector("#densityValue"),
+        windValue: document.querySelector("#windValue"),
+        tempoValue: document.querySelector("#tempoValue"),
+        sparkleValue: document.querySelector("#sparkleValue"),
+        toggle: document.querySelector("#toggle"),
+        regenerate: document.querySelector("#regenerate"),
+        restart: document.querySelector("#restart"),
+        save: document.querySelector("#save")
+      };
+
+      const palette = {
+        top: [22, 87, 205],
+        bottom: [31, 103, 216],
+        white: [247, 248, 239],
+        pale: [211, 222, 237],
+        mid: [158, 183, 220],
+        deep: [62, 112, 197]
+      };
+
+      let seed = Number(previewParams.get("seed")) || Math.floor(Math.random() * 1_000_000);
+      let lines = [];
+      let particles = [];
+      let drawOrder = [];
+      let stars = [];
+      let tails = [];
+      let waterLines = [];
+      let timeline = Number.isFinite(previewTime) && previewParams.has("time")
+        ? clampPreviewTime(previewTime)
+        : 0;
+      let isPlaying = !previewParams.has("time");
+      let previousTime = performance.now();
+
+      const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const smoothstep = (a, b, v) => {
+        const t = clamp((v - a) / (b - a));
+        return t * t * (3 - 2 * t);
+      };
+      const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+
+      function clampPreviewTime(value) {
+        return Math.max(0, Math.min(LOOP_SECONDS - 0.001, value));
+      }
+
+      function mulberry32(a) {
+        return function random() {
+          let t = (a += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function bezier(a, b, c, d, t) {
+        const mt = 1 - t;
+        return mt * mt * mt * a + 3 * mt * mt * t * b + 3 * mt * t * t * c + t * t * t * d;
+      }
+
+      function bezierDerivative(a, b, c, d, t) {
+        const mt = 1 - t;
+        return 3 * mt * mt * (b - a) + 6 * mt * t * (c - b) + 3 * t * t * (d - c);
+      }
+
+      function hash01(value) {
+        return Math.abs(Math.sin(value * 12.9898 + 78.233) * 43758.5453) % 1;
+      }
+
+      function catmullRom(a, b, c, d, t) {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        return 0.5 * (
+          2 * b +
+          (-a + c) * t +
+          (2 * a - 5 * b + 4 * c - d) * t2 +
+          (-a + 3 * b - 3 * c + d) * t3
+        );
+      }
+
+      function catmullRomDerivative(a, b, c, d, t) {
+        const t2 = t * t;
+        return 0.5 * (
+          (-a + c) +
+          2 * (2 * a - 5 * b + 4 * c - d) * t +
+          3 * (-a + 3 * b - 3 * c + d) * t2
+        );
+      }
+
+      function pointOnLine(line, u) {
+        if (line.nodes?.length >= 4) {
+          const last = line.nodes.length - 1;
+          const scaled = clamp(u) * last;
+          const index = Math.min(last - 1, Math.floor(scaled));
+          const t = scaled - index;
+          const p0 = line.nodes[Math.max(0, index - 1)];
+          const p1 = line.nodes[index];
+          const p2 = line.nodes[Math.min(last, index + 1)];
+          const p3 = line.nodes[Math.min(last, index + 2)];
+          const x = catmullRom(p0.x, p1.x, p2.x, p3.x, t);
+          const y = catmullRom(p0.y, p1.y, p2.y, p3.y, t);
+          const dx = catmullRomDerivative(p0.x, p1.x, p2.x, p3.x, t);
+          const dy = catmullRomDerivative(p0.y, p1.y, p2.y, p3.y, t);
+          const length = Math.max(0.001, Math.hypot(dx, dy));
+          return { x, y, tx: dx / length, ty: dy / length, nx: -dy / length, ny: dx / length };
+        }
+        const x = bezier(line.x0, line.x1, line.x2, line.x3, u);
+        const y = bezier(line.y0, line.y1, line.y2, line.y3, u);
+        const dx = bezierDerivative(line.x0, line.x1, line.x2, line.x3, u);
+        const dy = bezierDerivative(line.y0, line.y1, line.y2, line.y3, u);
+        const length = Math.max(0.001, Math.hypot(dx, dy));
+        return { x, y, tx: dx / length, ty: dy / length, nx: -dy / length, ny: dx / length };
+      }
+
+      function pointOnExtendedLine(line, u) {
+        const edgeU = clamp(u);
+        const edge = pointOnLine(line, edgeU);
+        if (u >= 0 && u <= 1) return edge;
+        const distance = (u - edgeU) * W * Math.max(0.025, line.lengthWeight);
+        return {
+          ...edge,
+          x: edge.x + edge.tx * distance,
+          y: edge.y + edge.ty * distance
+        };
+      }
+
+      function buildLines(random) {
+        const countPerSide = 36;
+        const headX = W * 0.405;
+        const headY = H * 0.140;
+        const footY = H * 0.710;
+        const makeSide = (side, offset) => Array.from({ length: countPerSide }, (_, localIndex) => {
+          const v = localIndex / (countPerSide - 1);
+          const mastX = headX;
+          const edgeArc = Math.sin(Math.PI * v);
+          // 每片帆各自拥有一条左侧承力边：上下端点钉死，中段沿端点连线平滑成弧。
+          const leftTopX = headX;
+          const leftTopY = headY;
+          const leftBottomX = side === "left" ? W * 0.080 : mastX;
+          const leftBottomY = side === "left" ? H * 0.735 : footY;
+          const leftArcX = lerp(leftTopX, leftBottomX, v) +
+            W * (side === "left" ? 0.060 : 0.050) * edgeArc;
+          const leftArcY = lerp(leftTopY, leftBottomY, v) + H * 0.006 * edgeArc;
+
+          // 右侧为自由边；端点位置分别定义两片帆的三角轮廓。
+          const rightBottomX = side === "left" ? W * 0.535 : W * 0.900;
+          const rightBottomY = side === "left" ? H * 0.595 : H * 0.625;
+          const rightArcX = lerp(headX, rightBottomX, Math.pow(v, side === "left" ? 0.90 : 0.84)) +
+            W * (side === "left" ? 0.012 : 0.050) * edgeArc;
+          const rightArcY = lerp(headY, rightBottomY, v) +
+            H * (side === "left" ? -0.010 : 0.016) * edgeArc;
+          const camber = Math.pow(Math.sin(Math.PI * v), 0.82);
+          const startX = leftArcX;
+          const startY = leftArcY;
+          const endX = rightArcX;
+          const endY = rightArcY;
+          const chordLength = Math.hypot(endX - startX, endY - startY);
+          // 三次贝塞尔的两个控制点同时下移 4/3*sag，使曲线中点获得指定重力弧垂。
+          const staticGravitySag = chordLength * (0.050 + 0.035 * camber);
+          const controlSag = staticGravitySag * 4 / 3;
+          const x1 = lerp(startX, endX, 1 / 3);
+          const y1 = lerp(startY, endY, 1 / 3) + controlSag;
+          const x2 = lerp(startX, endX, 2 / 3);
+          const y2 = lerp(startY, endY, 2 / 3) + controlSag;
+          const lineKey = localIndex + (side === "left" ? 0 : 53.7);
+          return {
+            index: offset + localIndex,
+            localIndex,
+            side,
+            v,
+            x0: startX,
+            y0: startY,
+            x1,
+            y1,
+            x2,
+            y2,
+            x3: endX,
+            y3: endY,
+            alpha: lerp(0.22, 0.39, random()),
+            fillOffset: random(),
+            tension: camber,
+            verticalPhaseJitter: lerp(-0.85, 0.85, hash01(lineKey + 0.17)),
+            verticalRate: lerp(0.88, 1.12, hash01(lineKey + 3.41)),
+            verticalAmplitude: lerp(0.80, 1.20, hash01(lineKey + 7.83)),
+            lengthWeight: Math.max(0.025, Math.hypot(endX - startX, endY - startY) / W)
+          };
+        });
+        lines = [
+          ...makeSide("left", 0),
+          ...makeSide("right", countPerSide)
+        ];
+      }
+
+      function upperMiddleWeight(v) {
+        return smoothstep(0.10, 0.18, v) * (1 - smoothstep(0.46, 0.56, v));
+      }
+
+      function lowerSailWeight(v) {
+        // 从下部约 60% 处平滑介入，避免在中下部形成突兀的粒径分界线。
+        return smoothstep(0.58, 0.76, v);
+      }
+
+      function radiusFor(v, u, random) {
+        // 两级粒子：大圆负责帆的重量和尺度秩序，小圆负责沿骨架高速输送。
+        // 小圆是独立的“风粒子”层，不会改变主体圆从上到下逐渐变大的规则。
+        const verticalScale = Math.pow(clamp(v), 1.28);
+        const regionalWeight = upperMiddleWeight(v);
+        const lowerWeight = lowerSailWeight(v);
+        const lowerRoll = random();
+        // 下部完整权重时：26% 小粒子、18% 中粒子；其余进入原有尺度逻辑。
+        // 使用连续权重渐入，不会出现一条明显的水平尺寸断层。
+        const isLowerSmall = lowerRoll < 0.26 * lowerWeight;
+        const isLowerMedium = !isLowerSmall && lowerRoll < 0.44 * lowerWeight;
+        // 圈定的上中部有 10% 权重生成“相对于小粒子更大”的中等粒子，
+        // 不是底部那种绝对大圆，避免破坏顶部尺度秩序。
+        const isRegionalMedium = !isLowerSmall && !isLowerMedium && random() < 0.10 * regionalWeight;
+        const isTopMedium = !isLowerSmall && !isLowerMedium && !isRegionalMedium && v < 0.28 && random() < 0.03;
+        const isTracer = isLowerSmall || (!isLowerMedium && !isRegionalMedium && !isTopMedium && random() < 0.28);
+        const radius = isLowerSmall
+          ? lerp(6.0, 10.2, random())
+          : isLowerMedium
+          ? lerp(10.5, 17.5, random())
+          : isRegionalMedium
+          ? lerp(11.5, 17.0, random())
+          : isTopMedium
+          ? lerp(10.5, 14.0, random())
+          : isTracer
+            ? lerp(5.8, 10.5, verticalScale) * lerp(0.90, 1.10, random())
+            : clamp(lerp(5.4, 34.0, verticalScale) * lerp(0.88, 1.12, random()), 5.0, 37.0);
+        let kind = "hero";
+        if (radius < 6.2) kind = "micro";
+        else if (radius < 9.2) kind = "small";
+        else if (radius < 13.4) kind = "medium";
+        else if (radius < 18.2) kind = "large";
+        return { radius, kind, isTracer };
+      }
+
+      function colorFor(random, side) {
+        const roll = random();
+        // 前帆更亮、后帆保留更多蓝灰层次：仍是同一调色板，但图层关系能被看见。
+        const whiteCut = 0.90;
+        const paleCut = 0.93;
+        const midCut = 0.97;
+        if (roll < whiteCut) return palette.white;
+        if (roll < paleCut) return palette.pale;
+        if (roll < midCut) return palette.mid;
+        return palette.deep;
+      }
+
+      function buildParticles(random) {
+        const desired = Number(controls.density.value);
+        particles = [];
+        tails = [];
+        // 每片帆只排除最上面的第 1 条轨迹，其余顶部区域仍正常生成粒子。
+        const particleLines = lines.filter(line => line.localIndex !== 0);
+        // 每一根骨架线先获得保底粒子，再按线长和帆腹权重分配余量。
+        // 这样不会因为随机抽线而把中腰抽空，也不会把所有粒子堆到底边。
+        const minimumPerLine = 7;
+        // 顶部弦长短，若仍只按线长分配会显得空。最顶层继续留空，
+        // 但其下约 22% 区域逐线增加保底粒子，把帆尖填实。
+        const minimums = particleLines.map(line =>
+          minimumPerLine + Math.round(1 * (1 - smoothstep(0.04, 0.22, line.v)))
+        );
+        const guaranteed = Math.min(desired, minimums.reduce((sum, value) => sum + value, 0));
+        const remainder = Math.max(0, desired - guaranteed);
+        const weights = particleLines.map(line => {
+          const bellyBoost = 1 + 1.70 * Math.pow(Math.sin(Math.PI * line.v), 1.25);
+          const lowerBrake = lerp(1, 0.72, Math.pow(line.v, 2));
+          const topDensityScale = lerp(0.70, 1, smoothstep(0.04, 0.30, line.v));
+          return Math.max(0.02, line.lengthWeight * bellyBoost * lowerBrake * topDensityScale);
+        });
+        const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+        const quotas = particleLines.map((line, index) => minimums[index] + remainder * weights[index] / totalWeight);
+        let particleId = 0;
+
+        for (let lineIndex = 0; lineIndex < particleLines.length; lineIndex += 1) {
+          const line = particleLines[lineIndex];
+          const quota = Math.max(1, Math.floor(quotas[lineIndex]));
+          for (let slot = 0; slot < quota; slot += 1) {
+          // 黄金分割错位铺点：每条流线从第一帧就均匀覆盖，避免随机形成整块空洞。
+          const baseU = 0.015 + 0.970 * ((line.fillOffset + slot * 0.61803398875) % 1);
+          // B 帆下部在桅杆旁保留一条收束缝，形成原作能读出的两片帆分界；
+          // 这不是帆腹缺密度，中腰仍由逐线保底和 bellyBoost 加密。
+          const seamGap = line.side === "right" ? 0.18 * smoothstep(0.62, 1, line.v) : 0;
+          const u = seamGap + (1 - seamGap) * baseU;
+          const base = pointOnLine(line, u);
+          const spec = radiusFor(line.v, u, random);
+          // 按轨迹长度反比补偿：长线使用更小的 u 速度，短线使用更大的 u 速度，
+          // 从而让各高度处的平均像素速度接近一致；个体速度独立随机，不再由尺寸决定。
+          const uniformPixelFlow = clamp(0.045 / Math.max(0.040, line.lengthWeight), 0.09, 0.62);
+          const regionalSpeedScale = lerp(1, 0.62, upperMiddleWeight(line.v));
+          const baseFlowSpeed = uniformPixelFlow * regionalSpeedScale;
+          const normalJitter = lerp(-1, 1, random()) * lerp(2, 6.5, line.v);
+          const alongJitter = lerp(-2.5, 2.5, random());
+          const x = base.x + base.nx * normalJitter + base.tx * alongJitter;
+          const y = base.y + base.ny * normalJitter + base.ty * alongJitter;
+          particles.push({
+            id: particleId,
+            line,
+            u,
+            spawnU: lerp(-0.10, 0.10, random()),
+            // 尾迹起点严格按本轨迹线自身长度归一化：90%～110% 独立随机。
+            exitU: lerp(0.90, 1.10, random()),
+            flowU: u,
+            ax: x,
+            ay: y,
+            x,
+            y,
+            tx: base.tx,
+            ty: base.ty,
+            nx: base.nx,
+            ny: base.ny,
+            normalJitter,
+            alongJitter,
+            radius: spec.radius,
+            kind: spec.kind,
+            isTracer: spec.isTracer,
+            color: colorFor(random, line.side),
+            alpha: 1,
+            phase: random() * TAU,
+            response: lerp(0.88, 1.12, random()),
+            baseFlowSpeed,
+            flowSpeed: baseFlowSpeed * lerp(0.70, 2.00, random()),
+            travel: lerp(1.4, 4.8, random()),
+            breathe: lerp(0.018, 0.055, random()),
+            shineSpeed: lerp(1.40, 2.50, random()),
+            shineKind: random() < 0.55 ? "breathe" : "glimmer",
+            // 离帆后共享向右恒速，但每颗粒子有独立而克制的纵向轨迹。
+            tailSlope: lerp(-0.030, 0.038, random()),
+            tailArc: lerp(-0.020, 0.020, random()),
+            tailVX: lerp(0.16, 0.48, random()),
+            tailVY: lerp(-0.15, 0.15, random()),
+            cutout: spec.radius > 10 && random() < 0.055,
+            cutSize: lerp(0.22, 0.48, random()),
+            cutAngle: random() * TAU,
+            life: 0,
+            scale: 0
+          });
+          particleId += 1;
+          }
+        }
+
+        // 白色圆无条件作为底色层；所有带色粒子在其上方，再按尺寸由小到大绘制。
+        drawOrder = particles.slice().sort((a, b) => {
+          const aLayer = a.color === palette.white ? 0 : 1;
+          const bLayer = b.color === palette.white ? 0 : 1;
+          return aLayer - bLayer || a.radius - b.radius;
+        });
+        stars = [];
+        // 分高度选取星芒，防止下部大圆把名额全部占满。
+        const starBands = [
+          // 星芒比例从上到下递增；中部维持不变，单次闪光参数不变。
+          { min: 0.00, max: 0.34, quota: 16 },
+          { min: 0.34, max: 0.67, quota: 30 },
+          { min: 0.67, max: 1.01, quota: 38 }
+        ];
+        for (const band of starBands) {
+          const bandStars = [];
+          const candidates = particles
+            .filter(p => p.line.v >= band.min && p.line.v < band.max && p.radius >= 4)
+            .sort((a, b) => Math.sin(a.phase * 2.13) - Math.sin(b.phase * 2.13));
+          for (const p of candidates) {
+            if (bandStars.every(other => Math.hypot(p.ax - other.ax, p.ay - other.ay) > 10)) {
+              p.starPhase = (bandStars.length / band.quota) * TAU + band.min * 0.7;
+              p.starBoost = band.max <= 0.34 ? 1.50 : band.max <= 0.67 ? 1.25 : 1.18;
+              bandStars.push(p);
+              stars.push(p);
+            }
+            if (bandStars.length >= band.quota) break;
+          }
+        }
+      }
+
+      function buildWater(random) {
+        waterLines = Array.from({ length: 124 }, (_, i) => {
+          const proximity = i / 123;
+          return {
+            x: random() * W,
+            y: lerp(H * 0.785, H * 0.985, Math.pow(proximity, 1.45)) + random() * 7,
+            length: lerp(12, 205, Math.pow(random(), 1.75)),
+            alpha: lerp(0.035, 0.35, Math.pow(1 - proximity, 1.2)) * lerp(0.55, 1, random()),
+            speed: lerp(2, 7, random()),
+            phase: random() * TAU,
+            width: random() < 0.14 ? 2 : 1
+          };
+        });
+      }
+
+      function buildScene() {
+        const random = mulberry32(seed);
+        buildLines(random);
+        buildParticles(random);
+        buildWater(random);
+        updateParticles();
+      }
+
+      function animatedLine(line, wind) {
+        // 框架时间与粒子倍速拆开：隐藏的动画速度滑杆只加速粒子输送，
+        // 帆面从稳定受风状态开始，避免加载后的第一下快速抽动。
+        const frameworkTime = timeline / Math.max(0.01, Number(controls.tempo.value));
+        const startupLoad = 1.12;
+        // 第一帧就生成完整风场与节点运动，不再从静态状态渐入。
+        const steadyGate = 1;
+        const commonPhase = (frameworkTime - 1.05) * 7.60 - line.v * 1.12;
+        // 主风场统一驱动整张帆。提高低频鼓动幅度，让轮廓运动不会被高速粒子掩盖。
+        const commonDrive = 1 + steadyGate * (
+          0.28 * Math.sin(commonPhase) +
+          0.06 * Math.sin(commonPhase * 0.53 + 0.8)
+        );
+        const commonLoad = startupLoad * commonDrive * (wind / 1.4) * 1.16;
+        // 左右线系只有 8% 的局部差异，避免重新变成两把各自扇动的扇子。
+        const sidePhase = line.side === "left" ? 0.78 : -0.32;
+        const localDrive = steadyGate * 0.06 * Math.sin(commonPhase * 1.17 + sidePhase);
+        const localLoad = commonLoad * (1 + localDrive);
+
+        // 水平鼓胀只保留较弱的整体呼吸，避免整条流线大幅左右抽动。
+        // 更细的风振交给少量内部节点沿竖直方向表达。
+        const horizontalDrive = 1 + steadyGate * (
+          0.10 * Math.sin(commonPhase) +
+          0.025 * Math.sin(commonPhase * 0.53 + 0.8)
+        );
+        const horizontalLoad = startupLoad * horizontalDrive * (wind / 1.4) * 1.16;
+
+        const freedom = line.tension;
+        // 中部由帆腹张力自然获得较大自由度；顶部另外保留一档较弱柔性。
+        // 因此顶部与中部都会独立上下运动，但顶部不会比帆腹更剧烈。
+        const topFlex = 0.42 * (1 - smoothstep(0.02, 0.28, line.v));
+        const verticalFreedom = Math.max(freedom, topFlex);
+        const span = Math.pow(line.v, 0.72);
+        const pinnedEdgeFreedom = Math.pow(Math.sin(Math.PI * line.v), 1.08);
+        // 跨高度只使用一条低频连续波，避免相邻流线端点出现锯齿。
+        const lineVerticalPhase = line.verticalPhaseJitter ?? 0;
+        const lineVerticalRate = line.verticalRate ?? 1;
+        const lineVerticalAmplitude = line.verticalAmplitude ?? 1;
+        const clothWave = lineVerticalAmplitude * Math.sin(
+          frameworkTime * 6.00 * lineVerticalRate - line.v * 1.45 + sidePhase + lineVerticalPhase
+        );
+        // 重力产生持续向下的弧垂；风越强布面越绷紧，但重力不会完全消失。
+        // pinnedEdgeFreedom 保证所有声明为硬锚点的端点不被重力拖走。
+        const gravityTension = lerp(1.12, 0.68, clamp(commonLoad / 1.8));
+        const gravitySag = H * (0.009 + 0.020 * span) * freedom * gravityTension;
+        const isFront = line.side === "left";
+        const load = isFront ? localLoad : commonLoad;
+        // 同一条曲线的位移权重从起点到终点严格单调递增，控制点不会越位反折。
+        const startWeight = span * pinnedEdgeFreedom * (isFront ? 0.016 : 0.022);
+        const endWeight = span * (isFront
+          ? 0.110 + 0.070 * freedom
+          : 0.160 + 0.080 * freedom);
+        const windWeight = u => lerp(startWeight, endWeight, smoothstep(0, 1, u));
+        // 垂直风压与重力也由连续函数采样，而不是给四个点互不相干的倍率。
+        const verticalWind = H * span * (0.005 + 0.008 * freedom) * clothWave * load;
+        const verticalWeight = u => 0.24 + 0.78 * Math.sin(Math.PI * u) + 0.24 * u;
+        const gravityWeight = u => 0.20 + 0.92 * Math.sin(Math.PI * u) + 0.30 * u;
+        const yOffset = (u, isPinnedEdge = false) => {
+          const pin = isPinnedEdge ? pinnedEdgeFreedom : 1;
+          return verticalWind * verticalWeight(u) * pin + gravitySag * gravityWeight(u) * pin;
+        };
+
+        // 每条轨迹只使用 7 个节点。内部节点主要上下运动，水平方向保持整体连续鼓胀。
+        const nodeCount = 7;
+        const nodes = Array.from({ length: nodeCount }, (_, index) => {
+          const u = index / (nodeCount - 1);
+          const base = pointOnLine(line, u);
+          const internalFreedom = Math.sin(Math.PI * u);
+          // 每个内部节点各自呼吸，不再用 -u*phase 制造可辨认的横向行波。
+          // 约 78% 为节点独立运动，22% 保留同一条线的共同呼吸，避免完全散架。
+          const nodeKey = line.index * 19.37 + index * 7.91;
+          const nodeRate = lerp(0.72, 1.18, hash01(nodeKey + 1.73));
+          const nodePhase = TAU * hash01(nodeKey + 4.29);
+          const nodeAmplitude = lerp(0.72, 1.24, hash01(nodeKey + 8.61));
+          const independentNodeWave = Math.sin(
+            frameworkTime * 4.45 * nodeRate + nodePhase + lineVerticalPhase * 0.45
+          );
+          const sharedLineBreath = Math.sin(
+            frameworkTime * 3.15 * lineVerticalRate + lineVerticalPhase + sidePhase
+          );
+          const nodeVerticalFlutter = H * 0.0065 * verticalFreedom * internalFreedom * steadyGate *
+            lineVerticalAmplitude * nodeAmplitude *
+            (0.78 * independentNodeWave + 0.22 * sharedLineBreath);
+          // 独立的低频升力脉冲：多数时间为 0，偶尔克服一部分重力使帆线中段上扬。
+          // internalFreedom 在两端为 0，因此固定点不会被升力拖走。
+          const liftPulse = Math.pow(Math.max(0, Math.sin(
+            frameworkTime * 2.35 * lineVerticalRate + lineVerticalPhase * 1.7 - line.v * 0.8
+          )), 3.2);
+          const occasionalLift = -H * 0.014 * verticalFreedom * internalFreedom * steadyGate *
+            lineVerticalAmplitude * liftPulse;
+          return {
+            x: base.x + W * windWeight(u) * horizontalLoad,
+            y: base.y + yOffset(u, u === 0) + nodeVerticalFlutter + occasionalLift
+          };
+        });
+
+        return {
+          ...line,
+          nodes
+        };
+      }
+
+      function randomizeRespawnedParticle(p) {
+        const random = Math.random;
+        const spec = radiusFor(p.line.v, 0, random);
+        p.radius = spec.radius;
+        p.kind = spec.kind;
+        p.isTracer = spec.isTracer;
+        p.normalJitter = lerp(-1, 1, random()) * lerp(2, 6.5, p.line.v);
+        p.alongJitter = lerp(-2.5, 2.5, random());
+        p.phase = random() * TAU;
+        p.response = lerp(0.88, 1.12, random());
+        p.flowSpeed = p.baseFlowSpeed * lerp(0.70, 2.00, random());
+        p.spawnU = lerp(-0.10, 0.10, random());
+        // 每次重生都重新抽取本轨迹线长度的 90%～110% 作为尾迹起点。
+        p.exitU = lerp(0.90, 1.10, random());
+        p.travel = lerp(1.4, 4.8, random());
+        p.breathe = lerp(0.018, 0.055, random());
+        p.shineSpeed = lerp(1.40, 2.50, random());
+        p.shineKind = random() < 0.55 ? "breathe" : "glimmer";
+        p.tailSlope = lerp(-0.030, 0.038, random());
+        p.tailArc = lerp(-0.020, 0.020, random());
+        p.tailVX = lerp(0.16, 0.48, random());
+        p.tailVY = lerp(-0.15, 0.15, random());
+        p.cutout = spec.radius > 10 && random() < 0.055;
+        p.cutSize = lerp(0.22, 0.48, random());
+        p.cutAngle = random() * TAU;
+      }
+
+      function emitTailSnapshot(p, movingLine) {
+        const edge = pointOnExtendedLine(movingLine, p.exitU);
+        tails.push({
+          side: p.line.side,
+          x0: edge.x + edge.nx * p.normalJitter,
+          y0: edge.y + edge.ny * p.normalJitter,
+          x: edge.x,
+          y: edge.y,
+          age: 0,
+          duration: lerp(2.00, 4.00, Math.random()),
+          radius: p.radius,
+          color: p.color,
+          alpha: p.alpha,
+          phase: p.phase,
+          shineSpeed: p.shineSpeed,
+          shineKind: p.shineKind,
+          starPhase: p.starPhase,
+          starBoost: p.starBoost,
+          isStar: Number.isFinite(p.starPhase),
+          vx: p.tailVX,
+          vy: p.tailVY,
+          arc: p.tailArc,
+          life: 1,
+          scale: 1
+        });
+      }
+
+      function updateTails(deltaTimeline, wind) {
+        for (const tail of tails) {
+          tail.age += deltaTimeline;
+          const progress = tail.age / tail.duration;
+          const tailDistance = W * (
+            progress * 0.025 +
+            progress * progress * 0.20
+          ) * wind * 5;
+          tail.x = tail.x0 + tailDistance * tail.vx;
+          tail.y = tail.y0 + tailDistance * tail.vy;
+          // 尾迹不使用透明渐隐；通过前段快速缩小完成视觉退场。
+          tail.life = 1;
+          const shrinkProgress = smoothstep(0.05, 0.90, progress);
+          tail.scale = lerp(1, 0.04, shrinkProgress);
+        }
+        tails = tails.filter(tail => tail.age < tail.duration);
+      }
+
+      function updateParticles(deltaTimeline = 0) {
+        const wind = Number(controls.wind.value);
+        for (const p of particles) {
+          const movingLine = animatedLine(p.line, wind);
+          if (deltaTimeline > 0) {
+            p.flowU += deltaTimeline * p.flowSpeed * wind;
+            if (p.flowU >= p.exitU) {
+              emitTailSnapshot(p, movingLine);
+              randomizeRespawnedParticle(p);
+              p.flowU = p.spawnU;
+            }
+          }
+
+          const flowU = p.flowU;
+          const base = pointOnExtendedLine(movingLine, flowU);
+          const wave = timeline * 0.72 * p.response - p.u * 3.7 - p.line.v * 0.72;
+          const downwind = (0.5 + 0.5 * Math.sin(wave)) * p.travel * wind;
+          const normalWave = timeline * 0.54 - p.u * 2.2 - p.line.v * 1.1;
+          const normal = Math.sin(normalWave) * 0.32 * wind;
+          p.x = base.x + base.nx * (p.normalJitter + normal) + base.tx * (p.alongJitter + downwind);
+          p.y = base.y + base.ny * (p.normalJitter + normal) + base.ty * (p.alongJitter + downwind);
+          const entryBlend = smoothstep(0, 0.075, Math.max(0, flowU));
+          p.life = 1;
+          p.scale = lerp(0.52, 1, entryBlend) *
+            (1 + Math.sin(timeline * 0.62 * p.response + p.phase) * p.breathe);
+        }
+        if (deltaTimeline > 0) updateTails(deltaTimeline, wind);
+      }
+
+      function drawBackground() {
+        const gradient = ctx.createLinearGradient(0, 0, 0, H);
+        gradient.addColorStop(0, rgba(palette.top, 1));
+        gradient.addColorStop(0.74, rgba(palette.bottom, 1));
+        gradient.addColorStop(1, "rgb(23,83,183)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, VIEW_W, H);
+      }
+
+      function shineAmount(p) {
+        const sparkle = Number(controls.sparkle.value);
+        const s = Math.max(0, Math.sin(timeline * p.shineSpeed + p.phase));
+        if (p.shineKind === "breathe") return (0.22 + 0.78 * s) * 0.075 * sparkle;
+        return Math.pow(s, 4) * 0.23 * sparkle;
+      }
+
+      function drawParticles(side = null) {
+        // 尾迹是离帆瞬间留下的独立快照；新粒子已在起点同步生成。
+        // 白色尾迹先画，带色尾迹后画，维持与帆面相同的层级规则。
+        for (let layer = 0; layer < 2; layer += 1) {
+          for (const tail of tails) {
+            if (side && tail.side !== side) continue;
+            const isWhite = tail.color === palette.white;
+            if ((layer === 0) !== isWhite) continue;
+            const tailRadius = Math.max(MIN_PARTICLE_RADIUS * 0.5, tail.radius * tail.scale);
+            ctx.beginPath();
+            ctx.arc(tail.x, tail.y, tailRadius, 0, TAU);
+            ctx.fillStyle = rgba(tail.color, clamp(tail.alpha * tail.life));
+            ctx.fill();
+          }
+        }
+
+        for (const p of drawOrder) {
+          if (side && p.line.side !== side) continue;
+          if (p.life < 0.008) continue;
+          const shine = shineAmount(p);
+          const radius = p.radius * p.scale;
+          if (p.life >= 0.008) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, TAU);
+            ctx.fillStyle = rgba(p.color, clamp((p.alpha + shine * 0.09) * p.life));
+            ctx.fill();
+          }
+
+          if (p.cutout && p.life >= 0.008) {
+            const offset = radius * (0.26 + p.cutSize * 0.24);
+            ctx.beginPath();
+            ctx.arc(
+              p.x + Math.cos(p.cutAngle) * offset,
+              p.y + Math.sin(p.cutAngle) * offset,
+              radius * p.cutSize,
+              0,
+              TAU
+            );
+            ctx.fillStyle = `rgba(32,101,211,${0.92 * p.life})`;
+            ctx.fill();
+          }
+        }
+      }
+
+      function drawStarBurst(p, x, y, life, sizeFactor = 1) {
+          if (life < 0.10) return;
+          const pulse = Math.pow(Math.max(0, Math.sin(timeline * p.shineSpeed + p.starPhase)), 10);
+          const alpha = clamp((0.025 + pulse * 5.00) * Number(controls.sparkle.value) * life * p.starBoost);
+          const length = lerp(48, 178, pulse) * sizeFactor;
+          const glowRadius = lerp(13.5, 90, pulse) * sizeFactor;
+
+          const glow = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
+          glow.addColorStop(0, `rgba(255,255,248,${alpha})`);
+          glow.addColorStop(0.22, `rgba(210,232,255,${alpha * 0.42})`);
+          glow.addColorStop(1, "rgba(150,195,255,0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(x, y, glowRadius, 0, TAU);
+          ctx.fill();
+
+          const horizontal = ctx.createLinearGradient(x - length, y, x + length, y);
+          horizontal.addColorStop(0, "rgba(180,215,255,0)");
+          horizontal.addColorStop(0.45, `rgba(224,241,255,${alpha * 0.48})`);
+          horizontal.addColorStop(0.5, `rgba(255,255,249,${alpha})`);
+          horizontal.addColorStop(0.55, `rgba(224,241,255,${alpha * 0.48})`);
+          horizontal.addColorStop(1, "rgba(180,215,255,0)");
+          ctx.strokeStyle = horizontal;
+          ctx.lineWidth = lerp(1.4, 3.2, pulse);
+          ctx.beginPath();
+          ctx.moveTo(x - length, y);
+          ctx.lineTo(x + length, y);
+          ctx.stroke();
+
+          const verticalLength = length * 0.32;
+          const vertical = ctx.createLinearGradient(x, y - verticalLength, x, y + verticalLength);
+          vertical.addColorStop(0, "rgba(180,215,255,0)");
+          vertical.addColorStop(0.5, `rgba(255,255,249,${alpha * 0.88})`);
+          vertical.addColorStop(1, "rgba(180,215,255,0)");
+          ctx.strokeStyle = vertical;
+          ctx.beginPath();
+          ctx.moveTo(x, y - verticalLength);
+          ctx.lineTo(x, y + verticalLength);
+          ctx.stroke();
+      }
+
+      function drawStars(side = null) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        for (const p of stars) {
+          if (side && p.line.side !== side) continue;
+          drawStarBurst(p, p.x, p.y, p.life, 1);
+        }
+        ctx.restore();
+      }
+
+      function drawWater() {
+        ctx.save();
+        for (const line of waterLines) {
+          const x = (line.x + timeline * line.speed * 3 + W) % (W + line.length) - line.length;
+          const flicker = 0.72 + 0.28 * Math.sin(timeline * 1.05 + line.phase);
+          ctx.strokeStyle = `rgba(225,239,244,${line.alpha * flicker})`;
+          ctx.lineWidth = line.width;
+          ctx.beginPath();
+          ctx.moveTo(x, line.y);
+          ctx.lineTo(x + line.length, line.y);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(248,248,237,0.97)";
+        ctx.beginPath();
+        ctx.moveTo(W * 0.295, H * 0.782);
+        ctx.lineTo(W * 0.535, H * 0.782);
+        ctx.lineTo(W * 0.505, H * 0.812);
+        ctx.lineTo(W * 0.325, H * 0.812);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "rgba(195,216,235,0.38)";
+        ctx.beginPath();
+        ctx.ellipse(W * 0.415, H * 0.835, W * 0.135, H * 0.018, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawPoem() {
+        ctx.save();
+        ctx.fillStyle = "rgba(229,238,236,0.34)";
+        ctx.font = '13px Inter, "Noto Sans SC", sans-serif';
+        ctx.letterSpacing = "1.15px";
+        ctx.textAlign = "center";
+        ctx.fillText("Someday, a great wind will break the surging waves,", W * 0.415, H * 0.385);
+        ctx.fillText("And I shall hoist my sails to the clouds, To cross the vast, stormy ocean.", W * 0.415, H * 0.410);
+        ctx.restore();
+      }
+
+      function render() {
+        drawBackground();
+        ctx.save();
+        ctx.translate(SCENE_X, 0);
+        drawPoem();
+        // 明确的绘制层级：B 后帆 → 刚性桅杆 → A 前帆。
+        // A 的圆点、星芒和框架线都覆盖 B，而不是两片帆混成一个图层。
+        drawParticles("right");
+        drawStars("right");
+        drawParticles("left");
+        drawStars("left");
+        drawWater();
+        ctx.restore();
+      }
+
+      function frame(now) {
+        const dt = Math.min((now - previousTime) / 1000, 0.035);
+        previousTime = now;
+        if (isPlaying) {
+          const deltaTimeline = dt * Number(controls.tempo.value);
+          timeline += deltaTimeline;
+          updateParticles(deltaTimeline);
+        }
+        render();
+        requestAnimationFrame(frame);
+      }
+
+      function syncLabels() {
+        controls.densityValue.value = controls.density.value;
+        controls.windValue.value = Number(controls.wind.value).toFixed(1);
+        controls.tempoValue.value = `${Number(controls.tempo.value).toFixed(2).replace(/0$/, "")}×`;
+        controls.sparkleValue.value = Number(controls.sparkle.value).toFixed(1);
+      }
+
+      controls.density.addEventListener("input", syncLabels);
+      controls.density.addEventListener("change", () => { seed += 1; buildScene(); });
+      controls.wind.addEventListener("input", syncLabels);
+      controls.tempo.addEventListener("input", syncLabels);
+      controls.sparkle.addEventListener("input", syncLabels);
+      controls.toggle.addEventListener("click", () => {
+        isPlaying = !isPlaying;
+        controls.toggle.textContent = isPlaying ? "暂停" : "继续";
+        previousTime = performance.now();
+      });
+      controls.regenerate.addEventListener("click", () => { seed += 1; buildScene(); });
+      controls.restart.addEventListener("click", () => { timeline = 0; buildScene(); });
+      controls.save.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.download = `yunfan-stream-${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+
+      syncLabels();
+      buildScene();
+      requestAnimationFrame(frame);
+    })();
+
+
+  </script>
+</body>
+</html>

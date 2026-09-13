@@ -1,0 +1,51 @@
+.ie-item.ie-project,
+.archive-ie-item.ie-project {
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: auto;
+  margin: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+  cursor: default;
+}
+
+.ie-project-preview {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #195bd0;
+}
+
+.ie-project .ie-project-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 43% center;
+  filter: none;
+  opacity: 1;
+  transform: none;
+}
+
+.ie-project-credit {
+  padding-top: 12px;
+  color: var(--black);
+  font: 400 13px/1.8 Inter, "Microsoft YaHei", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.ie-project-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.ie-project-preview:focus-visible,
+.ie-project-credit a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}

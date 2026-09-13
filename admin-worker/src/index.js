@@ -229,7 +229,7 @@ export function validateContent(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw httpError(400, "内容数据格式错误");
   const result = {
     scintilla: cleanItems(value.scintilla, (item) => ({ id: text(item.id, 200, true), date: text(item.date, 40, true), time: text(item.time, 40), content: text(item.content, 100000, true), moodTag: text(item.moodTag, 100) })),
-    inlandEmpire: cleanItems(value.inlandEmpire, (item) => ({ id: text(item.id, 200, true), date: text(item.date, 40, true), time: text(item.time, 40), src: text(item.src, 1000, true), alt: text(item.alt, 500), category: text(item.category, 100), caption: text(item.caption, 1000) })),
+    inlandEmpire: cleanItems(value.inlandEmpire, (item) => ({ id: text(item.id, 200, true), date: text(item.date, 40, true), time: text(item.time, 40), src: text(item.src, 1000, true), alt: text(item.alt, 500), category: text(item.category, 100), caption: text(item.caption, 1000), href: text(item.href, 2000), sourceUrl: text(item.sourceUrl, 2000) })),
     gravityRainbow: cleanItems(value.gravityRainbow, (item) => ({ id: text(item.id, 200, true), date: text(item.date, 40, true), time: text(item.time, 40), title: text(item.title, 500, true), mdFile: text(item.mdFile, 1000), mdContent: text(item.mdContent, 200000), tags: Array.isArray(item.tags) ? item.tags.slice(0, 30).map((tag) => text(tag, 100, true)) : [] })),
     bSide: cleanItems(value.bSide, (item) => ({ id: text(item.id, 200, true), date: text(item.date, 40, true), time: text(item.time, 40), content: text(item.content, 100000, true) })),
     manifesto: { text: text(value.manifesto?.text, 10000), bgStyle: text(value.manifesto?.bgStyle, 100) }

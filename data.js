@@ -3,7 +3,7 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v14';
+const DATA_VERSION = 'v15';
 
 const INITIAL_DATA = {
   scintilla: [
@@ -22,6 +22,15 @@ const INITIAL_DATA = {
   ],
 
   inlandEmpire: [
+    {
+      id: "ie_yunfan_20260913",
+      date: "2026.09.13",
+      src: "assets/yunfan/thumbnail.png",
+      alt: "云帆",
+      category: "",
+      caption: "练习作，参考作品原作者及原帖链接暂未查明。",
+      href: "projects/yunfan/"
+    },
     {
       id: "ie_1714560000000",
       date: "2026.04.28",

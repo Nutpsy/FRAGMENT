@@ -37,6 +37,18 @@ test("rejects duplicated IDs", () => {
   }), /重复 ID/);
 });
 
+test("preserves inland project and attribution links when saving content", () => {
+  const parsed = parseDataSource(source);
+  const project = {
+    id: "ie_yunfan", date: "2026.09.13", time: "", src: "assets/yunfan/thumbnail.png",
+    alt: "云帆", category: "", caption: "练习作，原作品来源",
+    href: "projects/yunfan/", sourceUrl: "https://www.xiaohongshu.com/explore/example"
+  };
+  parsed.data.inlandEmpire.push(project);
+  const generated = generateDataSource(source, parsed.data, "test-project");
+  assert.deepEqual(parseDataSource(generated).data.inlandEmpire[0], project);
+});
+
 test("parses and regenerates the live site data.js", async () => {
   const liveSource = await readFile(new URL("../../data.js", import.meta.url), "utf8");
   const parsed = parseDataSource(liveSource);

@@ -178,7 +178,7 @@ const ArchiveApp = {
         <div class="archive-date-group">
           <div class="archive-date-heading">${escapeHtml(g.date)}</div>
           <div class="archive-ie-date-group">
-            ${g.items.map(it => `
+            ${g.items.map(it => it.href ? renderInlandProject(it, true) : `
               <div class="archive-ie-item" data-id="${it.id}">
                 <img src="${escapeHtml(it.src)}" alt="${escapeHtml(it.alt || '')}" loading="lazy">
                 ${it.category ? `<span class="archive-ie-category">${escapeHtml(it.category)}</span>` : ''}
@@ -615,7 +615,7 @@ function initHomeRendering() {
   const ieGrid = document.getElementById('inland-empire-grid');
   if (ieGrid) {
     const items = SkadrateData.getLatest('inlandEmpire', 4);
-    ieGrid.innerHTML = items.map((it, idx) => `
+    ieGrid.innerHTML = items.map((it, idx) => it.href ? renderInlandProject(it) : `
       <div class="ie-item" data-delay="${idx * 80}" style="animation-delay:${idx * 0.08}s" data-id="${it.id}">
         <img src="${escapeHtml(it.src)}" alt="${escapeHtml(it.alt || '')}" loading="lazy">
         ${it.category ? `<span class="ie-category">${escapeHtml(it.category)}</span>` : ''}
@@ -623,7 +623,8 @@ function initHomeRendering() {
       </div>
     `).join('');
     ieGrid.querySelectorAll('.ie-item').forEach(item => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (event) => {
+        if (event.target.closest('a')) return;
         const id = item.dataset.id;
         Router.navigate(`post/inlandEmpire/${id}`);
       });
