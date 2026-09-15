@@ -3,10 +3,15 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v16';
+const DATA_VERSION = 'v17';
 
 const INITIAL_DATA = {
   scintilla: [
+    {
+      id: "sci_20260915_01",
+      date: "2026.09.15",
+      content: "最近的梦境总是支离破碎，还总是出现并不存在的人。"
+    },
     {
       id: "sci_1714560000000",
       date: "2026.05.02",
