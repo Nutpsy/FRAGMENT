@@ -1,3 +1,5 @@
+import { handleComments } from "./comments.js";
+
 const GITHUB_API_VERSION = "2026-03-10";
 const SESSION_SECONDS = 2 * 60 * 60;
 const MAX_JSON_BYTES = 1024 * 1024;
@@ -7,8 +9,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
-      validateEnvironment(env);
       if (request.method === "OPTIONS") return cors(request, env, new Response(null, { status: 204 }));
+      if (url.pathname === "/api/comments" || url.pathname.startsWith("/api/comments/")) {
+        return cors(request, env, await handleComments(request, env, { requireSession }));
+      }
+      validateEnvironment(env);
       if (url.pathname === "/auth/login" && request.method === "GET") return beginLogin(url, env);
       if (url.pathname === "/auth/callback" && request.method === "GET") return finishLogin(request, url, env);
       if (url.pathname === "/api/session" && request.method === "GET") {

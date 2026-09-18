@@ -1,0 +1,51 @@
+/* 保留栏目原名；较窄屏幕允许导航换行，不压缩汉字。 */
+.nav .nav-link-label { white-space: nowrap; }
+@media (max-width: 680px) {
+  .nav { grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
+  .nav .nav-links { min-width: 0; max-width: 100%; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; }
+  .nav .nav-link { font-size: 11px; letter-spacing: .04em; }
+}
+
+.fragment-comments {
+  width: min(720px, calc(100% - 40px));
+  margin: 64px auto;
+  padding-top: 24px;
+  border-top: 1px solid currentColor;
+  color: #292929;
+  font-family: inherit;
+}
+.fragment-comments[hidden] { display: none; }
+.fragment-comments h2 { margin: 0 0 12px; font-family: inherit; font-size: 24px; font-weight: 400; line-height: 1.4; }
+.fragment-comments p { margin: 0 0 20px; font-size: 13px; line-height: 1.8; }
+.fragment-comments form { display: grid; gap: 18px; }
+.fragment-comments label { display: grid; gap: 8px; font-size: 13px; }
+.fragment-comments input, .fragment-comments textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #909090;
+  border-radius: 0;
+  font: inherit;
+  line-height: 1.7;
+}
+.fragment-comments textarea { min-height: 140px; resize: vertical; }
+.fragment-comments button {
+  justify-self: start;
+  padding: 10px 24px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.fragment-comments button:disabled { opacity: .5; cursor: not-allowed; }
+.fragment-comments :is(input, textarea, button):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.fragment-comments [role="status"] { min-height: 1.8em; margin: 0; }
+.fragment-comments[data-channel="bside"] { color: #dededb; }
+@media (max-width: 680px) {
+  .fragment-comments { margin-block: 40px; }
+  .fragment-comments input, .fragment-comments textarea { font-size: 16px; }
+}

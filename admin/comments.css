@@ -1,0 +1,12 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #ededeb; color: #292929; font: 16px/1.8 system-ui, sans-serif; }
+main { max-width: 800px; margin: 48px auto; padding: 0 24px; }
+h1 { font-size: 30px; font-weight: 400; }
+a { color: inherit; }
+button { padding: 8px 16px; border: 1px solid currentColor; color: inherit; background: transparent; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+article { border-top: 1px solid #bbb; margin-top: 24px; padding: 20px 0; }
+article p { white-space: pre-wrap; overflow-wrap: anywhere; }
+article header { color: #555; font-size: 13px; }
+[hidden] { display: none; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }

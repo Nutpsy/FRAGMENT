@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https:; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>碎屑 · 留言</title>
+  <link rel="stylesheet" href="comments.css">
+  <script src="config.js" defer></script>
+  <script src="comments.js" defer></script>
+</head>
+<body>
+  <main>
+    <a href="./">← 返回管理</a>
+    <h1>留言</h1>
+    <p>首页与 B-SIDE 的来信，仅你可见。</p>
+    <p id="status" role="status" aria-live="polite"></p>
+    <button id="reload" type="button">刷新</button>
+    <div id="messages"></div>
+    <button id="more" type="button" hidden>更早的留言</button>
+  </main>
+</body>
+</html>
