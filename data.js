@@ -3,10 +3,15 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v18';
+const DATA_VERSION = 'v20';
 
 const INITIAL_DATA = {
   scintilla: [
+    {
+      id: "sci_20261028_01",
+      date: "2026.10.28",
+      content: "现在我还是会想，我会成为怎样的人呢"
+    },
     {
       id: "sci_20260915_01",
       date: "2026.09.15",
@@ -58,6 +63,11 @@ const INITIAL_DATA = {
   ],
 
   bSide: [
+    {
+      id: "bs_20261028_01",
+      date: "2026.10.28",
+      content: "默默死去的人会后悔自我封闭的傲慢吗？"
+    },
     {
       id: "bs_20260918_01",
       date: "2026.09.18",
