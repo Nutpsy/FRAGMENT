@@ -1,6 +1,8 @@
-# 私密留言部署
+# 评论服务部署
 
-当前实现：首页与 B-SIDE 分开收信，留言仅站主可见。没有公开读取留言的接口，也不会把留言提交到公开 GitHub 仓库。B-SIDE 原有前端密码不能提供内容保密；本功能不改变这一点。
+当前实现：首页评论明确同意公开后提交，审核通过才出现在公开列表，支持一级回复。B-SIDE 和旧版私密留言仍仅站主可见，后台拒绝将私密留言转公开。留言保存在 D1，不提交到公开 GitHub 仓库。B-SIDE 原有前端密码不能提供内容保密；本功能不改变这一点。
+
+2026-10-29：已创建 D1 `fragment-comments`、Turnstile widget 及 Worker `fragment-admin`。服务地址为 `https://fragment-admin.fragment-admin-worker.workers.dev`。当前 `COMMENTS_ENABLED=false` 且前端 `enabled:false`，等待 GitHub OAuth 管理登录配置及端到端验收，不接收真实留言。
 
 本地测试使用 Node.js 24（`node:sqlite` 内存数据库验证真实 SQL），`npm test` 不连接远程数据库，也不创建云资源。
 
@@ -12,15 +14,15 @@
 2. 执行 `npx wrangler d1 create fragment-comments`，将返回的配置加入 `wrangler.jsonc` 顶层 `d1_databases`，binding 必须为 `COMMENTS_DB`，database_name 为 `fragment-comments`，database_id 使用返回的真实 ID。
 3. 执行 `npx wrangler d1 migrations apply fragment-comments --remote` 创建表。
 4. 在 Cloudflare 创建免费 Turnstile widget，允许主机名 `nutpsy.github.io`。分别执行 `npx wrangler secret put TURNSTILE_SECRET` 和 `npx wrangler secret put COMMENTS_SECRET`。后者使用独立随机密钥，至少 32 字符，均不可写入仓库。
-5. 按 README 完成现有 GitHub 管理员 OAuth 配置，以便接收者能登录并读取留言。必须先确认管理端可用，再开放提交。
+5. 按 README 完成现有 GitHub 管理员 OAuth 配置，以便接收者能登录并读取留言。仅评论管理不需要仓库 Contents 写令牌。OAuth callback 为 `https://fragment-admin.fragment-admin-worker.workers.dev/auth/callback`。必须先确认管理端可用，再开放提交。
 6. 执行 `npm test`、`npm run deploy`。保持 `ADMIN_ORIGIN` 为 `https://nutpsy.github.io`。
-7. 将真实 Worker HTTPS 地址及公开 Turnstile site key 填入根目录 `comments-config.js`，将 Worker 地址填入 `admin/config.js`；更新 index.html 中 comments-config.js 缓存版本，再推送前端。
+7. 确认管理登录可用后，将 Worker 的 `COMMENTS_ENABLED` 改为 `true` 并部署，将 `comments-config.js` 的 `enabled` 改为 `true`；真实服务地址、公开 site key 及 `admin/config.js` 已填写。更新 index.html 的评论资源缓存版本，再推送前端。
 
 未配置前，前端不创建表单、不加载验证脚本，也不会伪装发送成功。生产验证只能从允许的 HTTPS 站点使用，不能直接用 file:// 提交。
 
 ## 管理及验收
 
-在 `/admin/` 登录后打开 `/admin/comments.html`，可查看首页 / B-SIDE 来信，按 50 条翻页，移除操作为数据库软删除，误操作可通过数据库恢复。
+在 `/admin/` 登录后打开 `/admin/comments.html`，可查看首页 / B-SIDE 来信，按 50 条翻页，审核或撤回公开评论。移除操作为数据库软删除，误操作可通过数据库恢复。回复仅在其原评论也公开时显示。
 
 上线前必须实际验证：首页与解锁后的 B-SIDE 各发送一条测试留言 → 管理页分别收到 → 移除测试留言。另确认未登录不能读收件箱、错误验证码无法发送、移动端表单无横向溢出。验证失败不得声称留言已上线。
 

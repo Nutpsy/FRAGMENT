@@ -211,6 +211,10 @@
     try {
       const payload = await api("/api/session");
       state.user = payload.user;
+      if (payload.publishingEnabled === false) {
+        location.replace("comments.html");
+        return;
+      }
       $("#identity-name").textContent = `@${payload.user.login}`;
       show(adminView);
       await loadContent();

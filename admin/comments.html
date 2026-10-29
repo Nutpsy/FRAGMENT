@@ -7,14 +7,14 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https:; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
   <title>碎屑 · 留言</title>
   <link rel="stylesheet" href="comments.css">
-  <script src="config.js" defer></script>
-  <script src="comments.js" defer></script>
+  <script src="config.js?v=2" defer></script>
+  <script src="comments.js?v=2" defer></script>
 </head>
 <body>
   <main>
     <a href="./">← 返回管理</a>
     <h1>留言</h1>
-    <p>首页与 B-SIDE 的来信，仅你可见。</p>
+    <p>首页评论审核后公开。私密留言和 B-SIDE 留言只能在这里查看。</p>
     <p id="status" role="status" aria-live="polite"></p>
     <button id="reload" type="button">刷新</button>
     <div id="messages"></div>

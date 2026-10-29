@@ -10,15 +10,18 @@ export default {
     const url = new URL(request.url);
     try {
       if (request.method === "OPTIONS") return cors(request, env, new Response(null, { status: 204 }));
+      if (url.pathname === "/health" && request.method === "GET") {
+        return json({ ok: true, commentsDatabase: Boolean(env.COMMENTS_DB) });
+      }
       if (url.pathname === "/api/comments" || url.pathname.startsWith("/api/comments/")) {
         return cors(request, env, await handleComments(request, env, { requireSession }));
       }
-      validateEnvironment(env);
+      validateEnvironment(env, ["/api/content", "/api/publish", "/api/upload"].includes(url.pathname));
       if (url.pathname === "/auth/login" && request.method === "GET") return beginLogin(url, env);
       if (url.pathname === "/auth/callback" && request.method === "GET") return finishLogin(request, url, env);
       if (url.pathname === "/api/session" && request.method === "GET") {
         const session = await requireSession(request, env);
-        return apiJson(request, env, { user: { id: session.sub, login: session.login }, expiresAt: session.exp });
+        return apiJson(request, env, { user: { id: session.sub, login: session.login }, expiresAt: session.exp, publishingEnabled: Boolean(env.GITHUB_CONTENT_TOKEN) });
       }
       if (url.pathname === "/api/content" && request.method === "GET") {
         await requireSession(request, env);
@@ -45,8 +48,9 @@ export default {
   }
 };
 
-function validateEnvironment(env) {
-  const required = ["ADMIN_ORIGIN", "ADMIN_URL", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GITHUB_CONTENT_TOKEN", "SESSION_SECRET", "GITHUB_ALLOWED_USER_ID", "GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH", "CONTENT_PATH"];
+function validateEnvironment(env, publishing = false) {
+  const required = ["ADMIN_ORIGIN", "ADMIN_URL", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "SESSION_SECRET", "GITHUB_ALLOWED_USER_ID"];
+  if (publishing) required.push("GITHUB_CONTENT_TOKEN", "GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH", "CONTENT_PATH");
   const missing = required.filter((key) => !env[key] || String(env[key]).startsWith("REPLACE_"));
   if (missing.length) throw httpError(503, `缺少 Worker 配置：${missing.join(", ")}`);
 }

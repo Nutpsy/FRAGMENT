@@ -3,10 +3,19 @@
   "name": "fragment-admin",
   "main": "src/index.js",
   "compatibility_date": "2026-08-19",
+  "account_id": "bc827a6c8863c32076be45611b269bb7",
+  "d1_databases": [
+    {
+      "binding": "COMMENTS_DB",
+      "database_name": "fragment-comments",
+      "database_id": "1997a12a-7328-444c-9e63-c6c2e64d9ed1"
+    }
+  ],
   "vars": {
+    "COMMENTS_ENABLED": "false",
     "ADMIN_ORIGIN": "https://nutpsy.github.io",
     "ADMIN_URL": "https://nutpsy.github.io/FRAGMENT/admin/",
-    "GITHUB_CLIENT_ID": "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID",
+    "GITHUB_CLIENT_ID": "Ov23lipdZRmXZerXciZG",
     "GITHUB_ALLOWED_USER_ID": "52111111",
     "GITHUB_OWNER": "Nutpsy",
     "GITHUB_REPO": "FRAGMENT",

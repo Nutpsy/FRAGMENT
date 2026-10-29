@@ -6,12 +6,14 @@ import { validateComment } from "../src/comments.js";
 import worker from "../src/index.js";
 
 const schema = await readFile(new URL("../migrations/0001_comments.sql", import.meta.url), "utf8");
+const publicSchema = await readFile(new URL("../migrations/0002_public_comments.sql", import.meta.url), "utf8");
 const origin = "https://nutpsy.github.io";
 const message = () => ({ channel: "home", nickname: "访客", message: "你好，碎屑。", token: "verified-token", requestId: crypto.randomUUID() });
 
 function database() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(schema);
+  sqlite.exec(publicSchema);
   return {
     sqlite,
     prepare(sql) {
@@ -35,7 +37,7 @@ function database() {
 async function withService(t, run) {
   const db = database();
   t.after(() => db.sqlite.close());
-  const env = { COMMENTS_DB: db, ADMIN_ORIGIN: origin, TURNSTILE_SECRET: "test-secret", COMMENTS_SECRET: "x".repeat(32), SESSION_SECRET: "s".repeat(32), GITHUB_ALLOWED_USER_ID: "52111111" };
+  const env = { COMMENTS_ENABLED: "true", COMMENTS_DB: db, ADMIN_ORIGIN: origin, TURNSTILE_SECRET: "test-secret", COMMENTS_SECRET: "x".repeat(32), SESSION_SECRET: "s".repeat(32), GITHUB_ALLOWED_USER_ID: "52111111" };
   let verifyResult = { success: true, hostname: "nutpsy.github.io", action: "comments" };
   t.mock.method(globalThis, "fetch", async url => {
     assert.equal(url, "https://challenges.cloudflare.com/turnstile/v0/siteverify");
@@ -62,6 +64,45 @@ test("validates channel, plain text, blank input and length limits", () => {
     assert.throws(() => validateComment({ ...message(), ...patch }), error => error.status === 400);
   }
 });
+
+test("public comments require approval, replies follow parent visibility, private messages cannot be published", async t => withService(t, async ({ call, db, env }) => {
+  const input = { ...message(), visibility: "public" };
+  assert.equal((await call("/api/comments", input)).status, 201);
+  const publicList = async () => (await (await call("/api/comments/public?channel=home")).json()).items;
+  assert.equal((await publicList()).length, 0);
+  assert.equal((await call("/api/comments/moderate", { seq: 1, status: "approved" })).status, 401);
+  const headers = { Authorization: await adminToken(env) };
+  assert.equal((await call("/api/comments/moderate", { seq: 1, status: "approved" }, headers)).status, 200);
+  assert.equal((await publicList()).length, 1);
+  const answer = { ...message(), visibility: "public", parentSeq: 1 };
+  assert.equal((await call("/api/comments", answer)).status, 201);
+  assert.equal((await publicList()).length, 1);
+  assert.equal((await call("/api/comments/moderate", { seq: 2, status: "approved" }, headers)).status, 200);
+  const listed = await publicList();
+  assert.equal(listed.length, 2);
+  assert.equal(listed[0].reply_to, input.nickname);
+  assert.equal(listed[0].request_id, undefined);
+  assert.equal((await call("/api/comments/moderate", { seq: 1, status: "pending" }, headers)).status, 200);
+  assert.equal((await publicList()).length, 0);
+  db.sqlite.prepare("INSERT INTO comments(request_id,channel,nickname,message,created_at) VALUES(?,?,?,?,?)").run(crypto.randomUUID(), "bside", "秘密", "不可公开", new Date().toISOString());
+  assert.equal((await call("/api/comments/moderate", { seq: 3, status: "approved" }, headers)).status, 400);
+  assert.equal((await call("/api/comments/public?channel=bside")).status, 400);
+  assert.equal((await call("/api/comments", { ...message(), channel: "bside", visibility: "public" })).status, 400);
+}));
+
+test("rejects replies to private, nonexistent, or unapproved comments", async t => withService(t, async ({ call }) => {
+  assert.equal((await call("/api/comments", message())).status, 201);
+  for (const parentSeq of [1, 999]) {
+    assert.equal((await call("/api/comments", { ...message(), visibility: "public", parentSeq })).status, 400);
+  }
+}));
+
+test("disabled submission gate fails closed before verification or database writes", async t => withService(t, async ({ call, env, db }) => {
+  env.COMMENTS_ENABLED = "false";
+  t.mock.method(console, "error", () => {});
+  assert.equal((await call("/api/comments", message())).status, 503);
+  assert.equal(db.sqlite.prepare("SELECT COUNT(*) AS n FROM comments").get().n, 0);
+}));
 
 test("accepts both channels without requiring unrelated GitHub publishing configuration", async t => withService(t, async ({ call, db }) => {
   assert.equal((await call("/api/comments", message())).status, 201);

@@ -30,7 +30,7 @@
   function render(item) {
     const row = document.createElement("article");
     const heading = document.createElement("header");
-    heading.textContent = `${item.channel === "bside" ? "B-SIDE" : "首页"} · ${item.nickname} · ${new Date(item.created_at).toLocaleString("zh-CN")}`;
+    heading.textContent = `${item.channel === "bside" ? "B-SIDE" : "首页"} · ${item.nickname} · ${new Date(item.created_at).toLocaleString("zh-CN")} · ${item.visibility === "public" ? (item.status === "approved" ? "已公开" : "待审核") : "私密"}${item.parent_seq ? ` · 回复 #${item.parent_seq}` : ""}`;
     const text = document.createElement("p");
     text.textContent = item.message;
     const remove = document.createElement("button");
@@ -43,6 +43,21 @@
       catch (error) { status.textContent = error.message; remove.disabled = false; }
     });
     row.append(heading, text, remove);
+    if (item.visibility === "public") {
+      const moderate = document.createElement("button");
+      moderate.type = "button";
+      moderate.textContent = item.status === "approved" ? "撤回公开" : "审核通过";
+      moderate.addEventListener("click", async () => {
+        moderate.disabled = true;
+        try {
+          const target = item.status === "approved" ? "pending" : "approved";
+          await api("/api/comments/moderate", { seq: item.seq, status: target });
+          row.replaceWith(render({ ...item, status: target }));
+          status.textContent = target === "approved" ? "已审核；回复仅在原评论也公开时可见。" : "已撤回公开。";
+        } catch (error) { status.textContent = error.message; moderate.disabled = false; }
+      });
+      row.append(moderate);
+    }
     return row;
   }
   async function load(reset) {

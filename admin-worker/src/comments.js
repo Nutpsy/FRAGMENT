@@ -1,4 +1,4 @@
-// Private inbox: there is deliberately no anonymous read/list endpoint.
+// Only explicitly public, approved home comments may be read anonymously.
 const fail = (status, message) => { throw Object.assign(new Error(message), { status }); };
 const reply = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
@@ -11,7 +11,11 @@ export function validateComment(input) {
   if (input.nickname !== undefined && (typeof input.nickname !== "string" || input.nickname.length > 40)) fail(400, "称呼不能超过 40 字");
   if (typeof input.requestId !== "string" || !/^[a-f0-9-]{36}$/i.test(input.requestId)) fail(400, "提交标识无效");
   if (typeof input.token !== "string" || !input.token || input.token.length > 2048) fail(400, "请完成防刷验证");
-  return { channel: input.channel, nickname: input.nickname?.trim() || "匿名", message: input.message.trim(), requestId: input.requestId, token: input.token };
+  const visibility = input.visibility ?? "private";
+  if (!["private", "public"].includes(visibility) || (input.channel === "bside" && visibility !== "private")) fail(400, "留言可见范围无效");
+  const parentSeq = input.parentSeq ?? null;
+  if (parentSeq !== null && (!Number.isSafeInteger(parentSeq) || parentSeq < 1 || visibility !== "public")) fail(400, "回复对象无效");
+  return { channel: input.channel, nickname: input.nickname?.trim() || "匿名", message: input.message.trim(), requestId: input.requestId, token: input.token, visibility, parentSeq };
 }
 
 async function readJson(request) {
@@ -45,6 +49,35 @@ export async function handleComments(request, env, { requireSession }) {
   const url = new URL(request.url);
   if (!env.COMMENTS_DB) fail(503, "留言服务尚未启用");
 
+  if (url.pathname === "/api/comments/public" && request.method === "GET") {
+    if (url.searchParams.get("channel") !== "home") fail(400, "此栏目不开放公开评论");
+    const before = Number(url.searchParams.get("before") || Number.MAX_SAFE_INTEGER);
+    if (!Number.isSafeInteger(before) || before < 1) fail(400, "分页标识无效");
+    const { results } = await env.COMMENTS_DB.prepare(
+      `SELECT c.seq, c.nickname, c.message, c.created_at, c.parent_seq, p.nickname AS reply_to
+       FROM comments c LEFT JOIN comments p ON p.seq = c.parent_seq
+       WHERE c.channel = 'home' AND c.visibility = 'public' AND c.status = 'approved'
+       AND c.deleted_at IS NULL AND c.seq < ?
+       AND (c.parent_seq IS NULL OR (p.visibility = 'public' AND p.status = 'approved' AND p.deleted_at IS NULL))
+       ORDER BY c.seq DESC LIMIT 51`
+    ).bind(before).all();
+    const items = results.slice(0, 50);
+    return reply({ items, next: results.length > 50 ? items.at(-1).seq : null });
+  }
+
+  if (url.pathname === "/api/comments/moderate" && request.method === "POST") {
+    if (!env.SESSION_SECRET || !env.GITHUB_ALLOWED_USER_ID) fail(503, "留言管理尚未配置");
+    await requireSession(request, env);
+    if (request.headers.get("Origin") !== env.ADMIN_ORIGIN) fail(403, "请求来源不被允许");
+    const input = await readJson(request);
+    if (!Number.isSafeInteger(input?.seq) || input.seq < 1 || !["pending", "approved"].includes(input.status)) fail(400, "审核参数无效");
+    const item = await env.COMMENTS_DB.prepare("SELECT visibility FROM comments WHERE seq = ? AND deleted_at IS NULL").bind(input.seq).first();
+    if (!item) fail(404, "留言不存在");
+    if (item.visibility !== "public") fail(400, "私密留言不能公开");
+    await env.COMMENTS_DB.prepare("UPDATE comments SET status = ? WHERE seq = ?").bind(input.status, input.seq).run();
+    return reply({ ok: true });
+  }
+
   if (url.pathname === "/api/comments/inbox" && request.method === "GET") {
     if (!env.SESSION_SECRET || !env.GITHUB_ALLOWED_USER_ID) fail(503, "留言管理尚未配置");
     await requireSession(request, env);
@@ -52,7 +85,7 @@ export async function handleComments(request, env, { requireSession }) {
     const before = raw === null ? Number.MAX_SAFE_INTEGER : Number(raw);
     if (!Number.isSafeInteger(before) || before < 1) fail(400, "分页标识无效");
     const { results } = await env.COMMENTS_DB.prepare(
-      "SELECT seq, channel, nickname, message, created_at FROM comments WHERE seq < ? AND deleted_at IS NULL ORDER BY seq DESC LIMIT 51"
+      "SELECT seq, channel, nickname, message, created_at, visibility, status, parent_seq FROM comments WHERE seq < ? AND deleted_at IS NULL ORDER BY seq DESC LIMIT 51"
     ).bind(before).all();
     const items = results.slice(0, 50);
     return reply({ items, next: results.length > 50 ? items.at(-1).seq : null });
@@ -69,6 +102,7 @@ export async function handleComments(request, env, { requireSession }) {
   }
 
   if (url.pathname !== "/api/comments" || request.method !== "POST") return reply({ error: "Not found" }, 404);
+  if (env.COMMENTS_ENABLED !== "true") fail(503, "评论尚未开放");
   if (!env.ADMIN_ORIGIN || !env.TURNSTILE_SECRET || !env.COMMENTS_SECRET || env.COMMENTS_SECRET.length < 32) fail(503, "留言服务尚未启用");
   if (request.headers.get("Origin") !== env.ADMIN_ORIGIN) fail(403, "请求来源不被允许");
   const input = validateComment(await readJson(request));
@@ -84,10 +118,14 @@ export async function handleComments(request, env, { requireSession }) {
   if (!check.success || check.hostname !== new URL(env.ADMIN_ORIGIN).hostname || check.action !== "comments") fail(400, "防刷验证失效，请重新验证");
 
   // Same request ID retries are safe even after an uncertain network response.
-  const existing = await env.COMMENTS_DB.prepare("SELECT channel, nickname, message FROM comments WHERE request_id = ?").bind(input.requestId).first();
+  const existing = await env.COMMENTS_DB.prepare("SELECT channel, nickname, message, visibility, parent_seq FROM comments WHERE request_id = ?").bind(input.requestId).first();
   if (existing) {
-    if (existing.channel !== input.channel || existing.nickname !== input.nickname || existing.message !== input.message) fail(409, "提交标识已使用，请刷新后重试");
+    if (existing.channel !== input.channel || existing.nickname !== input.nickname || existing.message !== input.message || existing.visibility !== input.visibility || existing.parent_seq !== input.parentSeq) fail(409, "提交标识已使用，请刷新后重试");
     return reply({ ok: true });
+  }
+  if (input.parentSeq !== null) {
+    const parent = await env.COMMENTS_DB.prepare("SELECT seq FROM comments WHERE seq = ? AND channel = ? AND visibility = 'public' AND status = 'approved' AND deleted_at IS NULL AND parent_seq IS NULL").bind(input.parentSeq, input.channel).first();
+    if (!parent) fail(400, "回复对象不存在或尚未公开");
   }
   const now = Date.now();
   const day = new Date(now).toISOString().slice(0, 10);
@@ -100,8 +138,8 @@ export async function handleComments(request, env, { requireSession }) {
   if (counts.some((result, i) => result.results[0].hits > limits[i])) fail(429, "留言太频繁，请稍后再试");
   // No raw IP, email, or user-agent is stored with the message.
   await env.COMMENTS_DB.prepare(
-    "INSERT INTO comments (request_id, channel, nickname, message, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(request_id) DO NOTHING"
-  ).bind(input.requestId, input.channel, input.nickname, input.message, new Date(now).toISOString()).run();
+    "INSERT INTO comments (request_id, channel, nickname, message, created_at, visibility, parent_seq) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(request_id) DO NOTHING"
+  ).bind(input.requestId, input.channel, input.nickname, input.message, new Date(now).toISOString(), input.visibility, input.parentSeq).run();
   await env.COMMENTS_DB.prepare("DELETE FROM comment_limits WHERE expires_at < ?").bind(now).run();
   return reply({ ok: true }, 201);
 }

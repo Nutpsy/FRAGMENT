@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../../comments.js", import.meta.url), "utf8");
 test("unconfigured or insecure comment endpoints do not create forms or network requests", () => {
-  for (const config of [{}, { apiBase: "" }, { apiBase: "http://example.com", siteKey: "public" }, { apiBase: "https://example.com" }]) {
+  for (const config of [{}, { enabled: false, apiBase: "https://example.com", siteKey: "public" }, { apiBase: "" }, { apiBase: "http://example.com", siteKey: "public" }, { apiBase: "https://example.com" }]) {
     vm.runInNewContext(source, {
       URL, window: { FRAGMENT_COMMENTS_CONFIG: config },
       document: new Proxy({}, { get() { assert.fail("disabled comments must not touch the DOM"); } }),
