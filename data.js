@@ -3,7 +3,7 @@
  * INITIAL_DATA 与 localStorage 深度合并
  */
 
-const DATA_VERSION = 'v20';
+const DATA_VERSION = 'v21';
 
 const INITIAL_DATA = {
   scintilla: [
@@ -32,6 +32,14 @@ const INITIAL_DATA = {
   ],
 
   inlandEmpire: [
+    {
+      id: "ie_sky_crawlers_20261031",
+      date: "2026.10.31",
+      src: "assets/sky-crawlers-20261031.png",
+      alt: "《空中杀手》电影截图",
+      category: "",
+      caption: "电影《空中杀手》截图，导演：押井守。"
+    },
     {
       id: "ie_yunfan_20260913",
       date: "2026.09.13",
